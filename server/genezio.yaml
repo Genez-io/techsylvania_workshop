@@ -1,0 +1,20 @@
+name: book-guru
+cloudProvider: aws
+region: us-east-1
+sdk:
+  language: ts
+  options:
+    runtime: browser
+  path: ../client/src/sdk
+frontend:
+  path: ../client/build
+  subdomain: pink-many-cephalopod
+scripts:
+  preBackendDeploy:  npm install 
+  postBackendDeploy:   
+  preFrontendDeploy:  cd ../client && npm install && npm run build && cd -
+  postFrontendDeploy:   
+classes:
+  - path: ./books.ts
+    type: jsonrpc
+    methods: []
