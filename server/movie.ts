@@ -30,7 +30,7 @@ export class MovieService {
 
   async recommendMoviesBasedOnDescription(userDescription: string): Promise<Movie[]> {
     // console.log("User description is " + userDescription);
-    console.log("Get movie recommendations based on description")
+    console.log("Get movie recommendations based on description", userDescription);
     const completion = await this.openai.createChatCompletion({
       model: "gpt-3.5-turbo",
       messages: [
@@ -46,16 +46,17 @@ export class MovieService {
       ],
       max_tokens: 2048
     });
-    // console.log("Input: ", userDescription);
-    // console.log(
-    // `DEBUG: response: |${completion.data.choices[0].message!.content}|`
-    // );
 
     if (completion.data && completion.data.choices && completion.data.choices.length > 0 && completion.data.choices[0].message) {
-      const movies = JSON.parse(completion.data.choices[0].message.content).movies;
+      try {
+        const movies = JSON.parse(completion.data.choices[0].message.content).movies;
 
-      console.log("Get movie recommendations based on description done.")
-      return movies
+        console.log("Get movie recommendations based on description done.")
+        return movies
+      } catch (e) {
+        console.log("Error parsing movie recommendations", completion.data.choices[0].message.content);
+        return [];
+      }
     }
 
     return [];
@@ -70,17 +71,26 @@ export class MovieService {
             console.log(`Reviews for title ${x.title} ${reviews}`);
             const summary = await this.#getReviewSummary(reviews);
 
-            const result: { advantages: string, disadvantages: string } = JSON.parse(summary);
+            try {
+              const result: { advantages: string, disadvantages: string } = JSON.parse(summary);
 
-            return {
-              title: x.title,
-              ...result
+              return {
+                title: x.title,
+                ...result
+              }
+            } catch (e) {
+              console.log("Error parsing movie review summary", summary);
+              return {
+                title: x.title,
+                advantages: "",
+                disadvantages: ""
+              }
             }
           }
           )
       );
 
-      
+
     const result = await Promise.all(prosAndConss);
 
     return result;

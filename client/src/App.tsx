@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Movie, MovieRecommendationDetails, MovieService } from "./sdk/movieService.sdk";
 
 export default function App() {
+  const [loading, setLoading] = useState<boolean>(false);
   const [moviesLoaded, setMoviesLoaded] = useState<boolean>(false);
   const [movies, setMovies] = useState<Movie[]>([]);
   const [movieRecommendationDetails, setMovieRecommendationDetails] = useState<MovieRecommendationDetails[]>([]);
@@ -24,14 +25,22 @@ export default function App() {
         setMoviesLoaded(false);
         setMovies([]);
         setMovieRecommendationDetails([]);
+        setLoading(true);
         const movies = await MovieService.recommendMoviesBasedOnDescription(userDescription);
-        console.log(movies)
+        setLoading(false);
+        
+        if (movies.length === 0) {
+          alert("An error has occured! Contact our system administrator!");
+          return;
+        }
+
         setMovies(movies);
         setMoviesLoaded(true);
 
         const result = await MovieService.getPronsAndConsForBooks(movies);
         setMovieRecommendationDetails(result);
       }}>Get movie recommendations</button>
+      {loading ? <div>Loading...</div> : <div></div>}
       {moviesLoaded ? 
       <div>
       <div style={{ display: "flex", flexDirection: "column" }}>
