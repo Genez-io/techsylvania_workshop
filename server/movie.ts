@@ -36,13 +36,9 @@ export class MovieService {
       messages: [
         {
           'role': ChatCompletionRequestMessageRoleEnum.System,
-          'content': `Between """ """ I will write what a person says about themselves. Create a list with 3 movies that the person would like to watch based on the text. Create the output as JSON one-liner with a field called "movies" which is an array of objects and each object contains a field called "title" and a field called "releaseDate" without any additional explanations.
-
-          """
-          ${userDescription}
-          """`,
-          'name': "test",
-        }
+          'content': `The user will write what they say about themselves. Create a list with 3 movies that the user would like to watch based on the text. Create the output as JSON without any aditional text, note or informations a one-liner with a field called "movies" which is an array of objects and each object contains a field called "title" and a field called "releaseDate" without any additional explanations.`
+        },
+        {role: ChatCompletionRequestMessageRoleEnum.User, content: userDescription}
       ],
       max_tokens: 2048
     });
