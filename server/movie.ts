@@ -3,6 +3,8 @@ import dotenv from "dotenv";
 import axios from "axios";
 dotenv.config();
 
+// --- Types ---
+
 export type Movie = {
   title: string,
   releaseDate: string,
@@ -14,31 +16,54 @@ export type MovieRecommendationDetails = {
   disadvantages: string,
 }
 
+// --- Constants ---
+
+const movieRecommendationPrompt = (userDescription: string) => (
+  `Between """ """ I will write what a person says about themselves. Create a list with 3 movies that the person would like to watch based on the text. Your response is a JSON one-liner with a field called "movies" which is an array of objects and each object contains a field called "title" and a field called "releaseDate" without any additional explanations.
+"""${userDescription}"""`);
+
+const reviewSummaryPrompt = (reviews: string[]) => (
+  `
+  Here is a list of reviews for one movie. One review is delimited by ||| marks.
+  ${reviews.map((x: string) => `|||${x.length > 100 ? x.substring(0, 100) : x}|||`).join("\n")}
+  
+  Your task is to analyze each review and give me a list of advantages and disadvantages to watch the movie.
+  
+  The result should be one JSON object with two fields "advantages" and "disadvantages".
+  If there are reviews, synthesize the reviews in these two fields. The advantages should contain the positives and the disadvantages the negatives. Don't use more than 30 words for each. Don't include anything else besides the JSON.
+  `
+);
+
 /**
- * The Task server class that will be deployed on the genezio infrastructure.
+ * The Movie class that will be deployed on the genezio infrastructure.
  */
 export class MovieService {
   openai: OpenAIApi;
 
   constructor() {
-    // console.log(process.env.OPENAI_SECRET_KEY);
     const configuration = new Configuration({
       apiKey: process.env.OPENAI_SECRET_KEY
     });
     this.openai = new OpenAIApi(configuration);
   }
 
+  /**
+   * Method that provides movie recommendations based on a user's input string.
+   * 
+   * @param userDescription A string input provided by the user describing their preferred types of movies or specific movie attributes they are interested in.
+   * @returns This method returns a Promise that resolves to an array of Movie objects. Each Movie object in the array represents a recommended movie that matches the user's description.
+   */
   async recommendMoviesBasedOnDescription(userDescription: string): Promise<Movie[]> {
-    // console.log("User description is " + userDescription);
     console.log("Get movie recommendations based on description", userDescription);
     const completion = await this.openai.createChatCompletion({
       model: "gpt-3.5-turbo",
+      temperature: 0.8,
       messages: [
         {
-          'role': ChatCompletionRequestMessageRoleEnum.System,
-          'content': `The user will write what they say about themselves. Create a list with 3 movies that the user would like to watch based on the text. Create the output as JSON without any aditional text, note or informations a one-liner with a field called "movies" which is an array of objects and each object contains a field called "title" and a field called "releaseDate" without any additional explanations.`
-        },
-        {role: ChatCompletionRequestMessageRoleEnum.User, content: userDescription}
+          'role': ChatCompletionRequestMessageRoleEnum.User,
+          'content': movieRecommendationPrompt(userDescription),
+          'name': "User",
+        }
       ],
       max_tokens: 2048
     });
@@ -50,7 +75,8 @@ export class MovieService {
         console.log("Get movie recommendations based on description done.")
         return movies
       } catch (e) {
-        console.log("Error parsing movie recommendations", completion.data.choices[0].message.content);
+        console.log(e);
+        console.error("Error parsing movie recommendations", completion.data.choices[0].message.content);
         return [];
       }
     }
@@ -58,13 +84,19 @@ export class MovieService {
     return [];
   }
 
-  async getPronsAndConsForBooks(movie: Movie[]): Promise<MovieRecommendationDetails[]> {
-    // Make post request with axios using headers
-    const prosAndConss = movie
+  /**
+   * Method that provides pros and cons analysis for a list of movie objects based on the reviews returned by TMDB API.
+   * 
+   * @param movies An array of Movie objects. Each Movie object should represent a movie for which pros and cons will be provided.
+   * @returns This method returns a Promise that resolves to an array of MovieRecommendationDetails objects.
+   *          Each MovieRecommendationDetails object in the array provides detailed information
+   *          about the pros and cons of the corresponding Movie object from the input array.
+   */
+  async getPronsAndConsForMovies(movies: Movie[]): Promise<MovieRecommendationDetails[]> {
+    const prosAndConss = movies
       .map((x: Movie) =>
         this.#getMovieReview(x.title)
           .then(async (reviews: string[]) => {
-            console.log(`Reviews for title ${x.title} ${reviews}`);
             const summary = await this.#getReviewSummary(reviews);
 
             try {
@@ -75,7 +107,7 @@ export class MovieService {
                 ...result
               }
             } catch (e) {
-              console.log("Error parsing movie review summary", summary);
+              console.error("Error parsing movie review summary", summary);
               return {
                 title: x.title,
                 advantages: "",
@@ -91,6 +123,8 @@ export class MovieService {
 
     return result;
   }
+
+  // --- Private methods ---
 
   async #getMovieReview(movieTitle: string): Promise<any> {
     const id = await this.#getMovieId(movieTitle);
@@ -124,30 +158,30 @@ export class MovieService {
     };
 
     const response = await axios(url, options)
+    if (response.data.results.length === 0 || response.data.results[0].id === undefined) {
+      throw new Error(`Movie with title ${title} not found!`);
+    }
+
     return response.data.results[0].id;
   }
 
   async #getReviewSummary(reviews: string[]): Promise<string> {
-    const prompt2 = `
-    Here is a list of reviews for one movie. One review is delimited by ||| marks.
-    ${reviews.map((x: string) => `|||${x.length > 100 ? x.substring(0, 100) : x}|||`).join("\n")}
-    
-    Your task is to analyze each review and give me a list of advantages and disadvantages to read the book.
-    
-    The result should be one JSON object with two fields "advantages" and "disadvantages". 
-    Synthesize the reviews in these two fields. The advantages should contain the positives and the disadvantages the negatives. Don't use more than 30 words for each. Don't include anything else besides the JSON.
-    `
+    if (reviews.length === 0) {
+      console.log("No reviews found!")
+      return `{"advantages": "No reviews found.", "disadvantages": "No reviews found."}`;
+    }
 
     const completion2 = await this.openai.createChatCompletion({
       model: "gpt-3.5-turbo",
+      temperature: 0.3,
       messages: [
         {
           'role': ChatCompletionRequestMessageRoleEnum.System,
-          'content': prompt2,
-          'name': "test",
+          'content': reviewSummaryPrompt(reviews),
+          'name': "User",
         }
       ],
-      max_tokens: 2048
+      max_tokens: 1024
     });
 
     return completion2.data.choices[0].message!.content;

@@ -37,7 +37,7 @@ export default function App() {
         setMovies(movies);
         setMoviesLoaded(true);
 
-        const result = await MovieService.getPronsAndConsForBooks(movies);
+        const result = await MovieService.getPronsAndConsForMovies(movies);
         setMovieRecommendationDetails(result);
       }}>Get movie recommendations</button>
       {loading ? <div>Loading...</div> : <div></div>}
