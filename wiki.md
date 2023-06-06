@@ -7,7 +7,7 @@ We aim to provide a seamless user experience by allowing the user to input his p
 
 A complete demo app can be accessed at https://movie-guru.app.genez.io.
 
-![enter image description here](https://lh3.googleusercontent.com/u/3/drive-viewer/AFGJ81rrgeynMLrYRNQB6llNmH4GUDp9qXkWFFOoiyTCf7GwtonNBoCehAGtxA81rAC_O6ElOflSu_CQTXEzmS4Q9shWl9oSYA=w2560-h1336)
+![enter image description here](https://lh3.googleusercontent.com/u/3/drive-viewer/AFGJ81omGopFXfUL14BfJkdlJVvBZw36VnssLKBhvm22rM2x1QJgh-3NeseXsH5FFpOIrJjvgUFRJJEqzhVgujAHgp6cEBSfFQ=w3456-h1820)
 
 ## Introduction
 Welcome to this hands-on tutorial about creating advanced prompts and integrating OpenAI in your project using the OpenAI SDK.
