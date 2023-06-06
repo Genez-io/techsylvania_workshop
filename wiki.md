@@ -1,4 +1,5 @@
 
+  
 # From Prompt to Cloud - Unlocking the Potential of Advanced Prompt Engineering with genezio
 Movie recommendation system built with OpenAI `gpt.3-5-turbo` based on the user input.
 
@@ -80,11 +81,11 @@ First, let's think about what we want to achieve with this prompt:
 Let's try a prompt like this one:
 
 	// this will be dynamic
-	userInput = `I am a person that likes to play tennis, 
+	userDescription = `I am a person that likes to play tennis, 
 	I am working as a software developer and in the last year I've read: 
 	Are You There, Vodka?, Do Androids Dream of Electric Sheep?.`
 	
-	prompt = `${userInput} Create a list with 3 movies that the user would like to watch based on the text.
+	prompt = `${userDescription} Create a list with 3 movies that the user would like to watch based on the text.
 	Create the output as JSON without any aditional text, note or informations a 
 	one-liner with a field called "movies" which is an array of objects and each 
 	object contains a field called "title" and a field called "releaseDate" without 
@@ -97,7 +98,7 @@ We will see that the prompt works just fine, but in the way we did it, it's easy
 
 A prompt that works perfect and doesn't have this problem would be:
 
-	prompt = `Between """ """ I will write what a person says about themselves. 
+	`Between """ """ I will write what a person says about themselves. 
 	Create a list with 3 movies that the person would like to watch 
 	based on the text. Create the output as JSON one-liner with a 
 	field called "movies" which is an array of objects and each 
@@ -105,23 +106,52 @@ A prompt that works perfect and doesn't have this problem would be:
 	"releaseDate" without any additional explanations.
 
     """
-    ${userInput}
+    ${userDescription}
     """` 
 The output will consistently be in JSON format for easy parsing. Another check to avoid prompt injection is to try to parse the result on the server side, and if an error occurs notify the user.
 
-The sdk call will look something like this:
+This final prompt for movies recommendation should be inserted in the code at **TODO1**.
+
+Now we will take care about the **TODO2** where we have to make a call to the OpenAI API to generate movie recommendations based on the user's description and return the parsed answer.
+
+First we will make the call to OpenAI.
 
 	const completion = await this.openai.createChatCompletion({
 		model:  "gpt-3.5-turbo",
+		temperature:  0.8,
 		messages: [
 			{
-			'role':  ChatCompletionRequestMessageRoleEnum.System,
-			'content':  prompt
+			'role':  ChatCompletionRequestMessageRoleEnum.User,
+			'content':  movieRecommendationPrompt(userDescription)
 			}
 		],
 		max_tokens:  2048
 	});
-	
+This function call of `createChatCompletion` takes a config object as parameter that has the following configurations:
+
+ - `model` - the gpt model that we want to use
+ - `temperature` -  controls the randomness of the generated text, with higher values (e.g., 0.8) producing more diverse and creative outputs, while lower values (e.g., 0.2) result in more focused and deterministic responses. - for this call we are using **0.8** for a creative result
+ - `messages` - a list of messages to give to the model
+ - message object
+	 - `role` - allows you to specify a particular persona or perspective for the generated text, enabling you to control the style, tone, or expertise of the AI-generated content.
+	 - `content` - your prompt
+ - `max_tokens` - maximum number of tokens in the output
+
+Now we have to check the output of OpenAI, parse the output and return it.
+
+	if (completion.data && completion.data.choices
+		&& completion.data.choices.length > 0
+		&& completion.data.choices[0].message) {
+		try {
+			const  movies = JSON.parse(completion.data.choices[0].message.content).movies;
+			return  movies
+		} catch (e) {
+			console.log(e);
+			console.error("Error parsing movie recommendations", completion.data.choices[0].message.content);
+			return [];
+		}
+	}
+	return [];
 
 #### Get Movies Reviews Summary
 Now we will work in the function `getReviewSummary` from `movie.ts`.
