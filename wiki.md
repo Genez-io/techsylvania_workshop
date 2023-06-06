@@ -11,7 +11,7 @@ A complete demo app can be accessed at https://movie-guru.app.genez.io.
 ## Objectives
 
 At the end of this tutorial you will be able to:
- - Create a prompt as a proffesional
+ - Create a prompt as a professional
  - Integrate OpenAI programmatically using the OpenAI SDK
  - Avoid classic mistakes of prompt engineering
  - Deploy a full stack application on genezio
