@@ -33,7 +33,7 @@ export default function App() {
             setLoading(true);
             const movies = await MovieService.recommendMoviesBasedOnDescription(userDescription);
             setLoading(false);
-            
+
             if (movies.length === 0) {
               alert("An error has occured! Contact our system administrator!");
               return;
@@ -42,11 +42,11 @@ export default function App() {
             setMovies(movies);
             setMoviesLoaded(true);
 
-            const result = await MovieService.getPronsAndConsForMovies(movies);
+            const result = await MovieService.getProsAndConsForMovies(movies);
             setMovieRecommendationDetails(result);
           }}>Get movie recommendations</Button>
           {loading ? <div>Loading...</div> : <div></div>}
-          {moviesLoaded ? 
+          {moviesLoaded ?
             (<div>
               <div style={{ display: "flex", flexDirection: "column" }} className="mt-3">
                 <b>The recommended movies are:</b>
@@ -55,7 +55,7 @@ export default function App() {
               <div className="mt-3"><b>Let's see what people say about them:</b></div>
               {movieRecommendationDetails.length === 0 ? (<div>Loading...</div>) : (<div></div>)}
             </div>) : (<div></div>)}
-          
+
 
           <div style={{ display: "flex", flexDirection: "column" }}>
             {movieRecommendationDetails.map((x) =>

@@ -19,11 +19,11 @@ export type MovieRecommendationDetails = {
 // --- Constants ---
 
 const movieRecommendationPrompt = (userDescription: string) => (
-  // TODO: Write the prompt for the movie recommendation here.  
+  // TODO 1: Write the prompt for the movie recommendation here.
   ``);
 
 const reviewSummaryPrompt = (reviews: string[]) => (
-  // TODO: Write the prompt for the review summary here.
+  // TODO 3: Write the prompt for the review summary here.
   ``
 );
 
@@ -42,54 +42,72 @@ export class MovieService {
 
   /**
    * Method that provides movie recommendations based on a user's input string.
-   * 
-   * @param userDescription A string input provided by the user describing their preferred types of movies or specific movie attributes they are interested in.
-   * @returns This method returns a Promise that resolves to an array of Movie objects. Each Movie object in the array represents a recommended movie that matches the user's description.
+   *
+   * @param userDescription A string input provided by the user describing their
+   *                        preferred types of movies or specific movie attributes
+   *                        they are interested in.
+   *
+   * @returns This method returns a Promise that resolves to an array of Movie objects.
+   *          Each Movie object in the array represents a recommended movie that
+   *          matches the user's description.
    */
   async recommendMoviesBasedOnDescription(userDescription: string): Promise<Movie[]> {
     const prompt = movieRecommendationPrompt(userDescription);
-    // TODO: Make a call to the OpenAI API to generate movie recommendations based on the user's description
+    // TODO 2: Make a call to the OpenAI API to generate movie recommendations based on the user's description
     // Parse and return the results as an array of Movie objects.
+
+    const response = await this.openai.createChatCompletion({
+      model: 'gpt-3.5-turbo',
+      temperature: 0.5,    // This check is used to prevent prompt injection attacks.
+
+      messages: [
+        {
+          role: ChatCompletionRequestMessageRoleEnum.User,
+          content: prompt,
+        },
+      ],
+      max_tokens: 1024,
+    });
+
+
+    // TODO 2.1 Check if the response contains the expected output format.
+    // This check is used to prevent prompt injection attacks.
+    if (response.data && response.data.choices && response.data.choices.length > 0 && response.data.choices[0].message) {
+      try {
+        const movies = JSON.parse(response.data.choices[0].message.content);
+
+        console.log("Get movie recommendations based on description done.")
+        return movies;
+      } catch (e) {
+        console.error("Error parsing movie recommendations", response.data.choices[0].message.content);
+        return [];
+      }
+    }
 
     return [];
   }
 
   /**
    * Method that provides pros and cons analysis for a list of movie objects based on the reviews returned by TMDB API.
-   * 
+   *
    * @param movies An array of Movie objects. Each Movie object should represent a movie for which pros and cons will be provided.
+   *
    * @returns This method returns a Promise that resolves to an array of MovieRecommendationDetails objects.
    *          Each MovieRecommendationDetails object in the array provides detailed information
    *          about the pros and cons of the corresponding Movie object from the input array.
    */
-  async getPronsAndConsForMovies(movies: Movie[]): Promise<MovieRecommendationDetails[]> {
-    const prosAndConss = movies
+  async getProsAndConsForMovies(movies: Movie[]): Promise<MovieRecommendationDetails[]> {
+    const prosAndCons = movies
       .map((x: Movie) =>
         this.#getMovieReview(x.title)
           .then(async (reviews: string[]) => {
-            const summary = await this.#getReviewSummary(reviews);
-
-            try {
-              const result: { advantages: string, disadvantages: string } = JSON.parse(summary);
-
-              return {
-                title: x.title,
-                ...result
-              }
-            } catch (e) {
-              console.error("Error parsing movie review summary", summary);
-              return {
-                title: x.title,
-                advantages: "",
-                disadvantages: ""
-              }
-            }
+            return await this.#getReviewSummary(reviews);
           }
           )
       );
 
 
-    const result = await Promise.all(prosAndConss);
+    const result = await Promise.all(prosAndCons);
 
     return result;
   }
@@ -135,10 +153,18 @@ export class MovieService {
     return response.data.results[0].id;
   }
 
-  async #getReviewSummary(reviews: string[]): Promise<string> {
+  async #getReviewSummary(reviews: string[]): Promise<MovieRecommendationDetails> {
     const prompt = reviewSummaryPrompt(reviews);
-    // TODO: Make a call to the OpenAI API to generate a summary of the reviews
+    // TODO 4: Make a call to the OpenAI API to generate a summary of the reviews
     // Parse the response and return the results as a string.
-    return ""
+
+    // TODO 4.1 Check if the response contains the expected output format.
+    // This check is used to prevent prompt injection attacks.
+
+    return {
+      title: "",
+      advantages: "",
+      disadvantages: ""
+    }
   }
 }
