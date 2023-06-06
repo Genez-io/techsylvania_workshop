@@ -3,17 +3,12 @@ cloudProvider: aws
 region: us-east-1
 sdk:
   language: ts
-  options:
-    runtime: browser
   path: ../client/src/sdk
 frontend:
   path: ../client/build
-  subdomain: movie-guru
 scripts:
-  preBackendDeploy:  npm install 
-  postBackendDeploy:   
+  preBackendDeploy:  npm install
   preFrontendDeploy:  cd ../client && npm install && npm run build && cd -
-  postFrontendDeploy:   
 classes:
   - path: ./movie.ts
     type: jsonrpc

@@ -19,16 +19,20 @@ export type MovieRecommendationDetails = {
 // --- Constants ---
 
 const movieRecommendationPrompt = (userDescription: string) => (
-  `Between """ """ I will write what a person says about themselves. Create a list with 3 movies that the person would like to watch based on the text. Your response is a JSON one-liner with a field called "movies" which is an array of objects and each object contains a field called "title" and a field called "releaseDate" without any additional explanations.
+  `Between """ """ I will write what a person says about themselves.
+  Create a list with 3 movies that the person would like to watch based on the text.
+  Your response is a JSON one-liner with a field called "movies" which is an array of objects
+  and each object contains a field called "title" and a field called "releaseDate"
+  without any additional explanations.
 """${userDescription}"""`);
 
 const reviewSummaryPrompt = (reviews: string[]) => (
   `
   Here is a list of reviews for one movie. One review is delimited by ||| marks.
   ${reviews.map((x: string) => `|||${x.length > 100 ? x.substring(0, 100) : x}|||`).join("\n")}
-  
+
   Your task is to analyze each review and give me a list of advantages and disadvantages to watch the movie.
-  
+
   The result should be one JSON object with two fields "advantages" and "disadvantages".
   If there are reviews, synthesize the reviews in these two fields. The advantages should contain the positives and the disadvantages the negatives. Don't use more than 30 words for each. Don't include anything else besides the JSON.
   `
@@ -49,9 +53,14 @@ export class MovieService {
 
   /**
    * Method that provides movie recommendations based on a user's input string.
-   * 
-   * @param userDescription A string input provided by the user describing their preferred types of movies or specific movie attributes they are interested in.
-   * @returns This method returns a Promise that resolves to an array of Movie objects. Each Movie object in the array represents a recommended movie that matches the user's description.
+   *
+   * @param userDescription A string input provided by the user describing their
+   *                        preferred types of movies or specific movie attributes
+   *                        they are interested in.
+   *
+   * @returns This method returns a Promise that resolves to an array of Movie objects.
+   *          Each Movie object in the array represents a recommended movie that
+   *          matches the user's description.
    */
   async recommendMoviesBasedOnDescription(userDescription: string): Promise<Movie[]> {
     console.log("Get movie recommendations based on description", userDescription);
@@ -62,7 +71,6 @@ export class MovieService {
         {
           'role': ChatCompletionRequestMessageRoleEnum.User,
           'content': movieRecommendationPrompt(userDescription),
-          'name': "User",
         }
       ],
       max_tokens: 2048
@@ -86,40 +94,24 @@ export class MovieService {
 
   /**
    * Method that provides pros and cons analysis for a list of movie objects based on the reviews returned by TMDB API.
-   * 
+   *
    * @param movies An array of Movie objects. Each Movie object should represent a movie for which pros and cons will be provided.
+   *
    * @returns This method returns a Promise that resolves to an array of MovieRecommendationDetails objects.
    *          Each MovieRecommendationDetails object in the array provides detailed information
    *          about the pros and cons of the corresponding Movie object from the input array.
    */
-  async getPronsAndConsForMovies(movies: Movie[]): Promise<MovieRecommendationDetails[]> {
-    const prosAndConss = movies
-      .map((x: Movie) =>
-        this.#getMovieReview(x.title)
-          .then(async (reviews: string[]) => {
-            const summary = await this.#getReviewSummary(reviews);
-
-            try {
-              const result: { advantages: string, disadvantages: string } = JSON.parse(summary);
-
-              return {
-                title: x.title,
-                ...result
-              }
-            } catch (e) {
-              console.error("Error parsing movie review summary", summary);
-              return {
-                title: x.title,
-                advantages: "",
-                disadvantages: ""
-              }
-            }
+  async getProsAndConsForMovies(movies: Movie[]): Promise<MovieRecommendationDetails[]> {
+    const prosAndCons = movies
+    .map((x: Movie) =>
+      this.#getMovieReview(x.title)
+        .then(async (reviews: string[]) => {
+          return await this.#getReviewSummary(x.title, reviews);
           }
-          )
+        )
       );
 
-
-    const result = await Promise.all(prosAndConss);
+    const result = await Promise.all(prosAndCons);
 
     return result;
   }
@@ -165,10 +157,10 @@ export class MovieService {
     return response.data.results[0].id;
   }
 
-  async #getReviewSummary(reviews: string[]): Promise<string> {
+  async #getReviewSummary(title: string, reviews: string[]): Promise<MovieRecommendationDetails> {
     if (reviews.length === 0) {
       console.log("No reviews found!")
-      return `{"advantages": "No reviews found.", "disadvantages": "No reviews found."}`;
+      return {"title":title, "advantages": "No reviews found.", "disadvantages": "No reviews found."};
     }
 
     const completion2 = await this.openai.createChatCompletion({
@@ -178,12 +170,23 @@ export class MovieService {
         {
           'role': ChatCompletionRequestMessageRoleEnum.System,
           'content': reviewSummaryPrompt(reviews),
-          'name': "User",
         }
       ],
       max_tokens: 1024
     });
 
-    return completion2.data.choices[0].message!.content;
+    if (completion2.data && completion2.data.choices && completion2.data.choices.length > 0 && completion2.data.choices[0].message) {
+      try {
+        const result: { advantages: string, disadvantages: string } = JSON.parse(completion2.data.choices[0].message.content);
+        console.log("Get review summary done.")
+        return {"title":title, "advantages": result.advantages, "disadvantages": result.disadvantages};
+      } catch (e) {
+        console.log(e);
+        console.error("Error parsing review summary", completion2.data.choices[0].message.content);
+        return {"title":title, "advantages": "", "disadvantages": ""};
+      }
+    }
+
+    return {"title":title, "advantages": "", "disadvantages": ""};
   }
 }
