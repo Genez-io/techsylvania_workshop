@@ -1,0 +1,15 @@
+name: movie-guru
+cloudProvider: aws
+region: us-east-1
+scripts:
+  preBackendDeploy: npm install
+  preFrontendDeploy: npm install @genezio-sdk/movie-guru_us-east-1 && npm
+    install && npm run build
+  preStartLocal: cd server && npm install
+frontend:
+  path: client\dist
+  subdomain: movie-guru2
+packageManager: npm
+workspace:
+  backend: server
+  frontend: client
