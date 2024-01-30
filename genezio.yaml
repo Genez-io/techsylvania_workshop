@@ -1,6 +1,6 @@
 name: movie-guru
-cloudProvider: aws
 region: us-east-1
+language: ts
 scripts:
   preBackendDeploy: npm install
   preFrontendDeploy: npm install @genezio-sdk/movie-guru_us-east-1 && npm

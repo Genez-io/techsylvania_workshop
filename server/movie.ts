@@ -82,7 +82,9 @@ export class MovieService {
       response.data.choices[0].message
     ) {
       try {
-        const movies = JSON.parse(response.data.choices[0].message.content!);
+        const movies = JSON.parse(
+          response.data.choices[0].message.content!
+        ).movies;
 
         console.log("Get movie recommendations based on description done.");
         return movies;
